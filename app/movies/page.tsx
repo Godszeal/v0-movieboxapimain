@@ -26,6 +26,8 @@ export default function MoviesPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [searching, setSearching] = useState(false)
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
 
   useEffect(() => {
     fetchTrendingMovies()
@@ -75,37 +77,96 @@ export default function MoviesPage() {
     }
   }
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!searchQuery.trim()) return
+  const fetchSuggestions = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
 
     try {
-      setSearching(true)
-      const response = await fetch("/api/search", {
+      const response = await fetch("/api/search-suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery }),
+        body: JSON.stringify({ query }),
       })
       const data = await response.json()
 
       if (data.data && Array.isArray(data.data)) {
-        const formattedMovies = data.data.map((item: any) => ({
-          id: item.id || item.subjectId,
-          title: item.title || item.name,
-          poster: item.poster || item.coverUrl,
-          rating: item.rating,
-          year: item.year,
-          description: item.description,
+        setSuggestions(data.data.slice(0, 5))
+        setShowSuggestions(true)
+      }
+    } catch (error) {
+      console.error("Error fetching suggestions:", error)
+    }
+  }
+
+  const handleSearchInputChange = (value: string) => {
+    setSearchQuery(value)
+    fetchSuggestions(value)
+  }
+
+  const handleSuggestionClick = (suggestion: any) => {
+    const title = suggestion.title || suggestion.name
+    setSearchQuery(title)
+    setShowSuggestions(false)
+    handleSearchWithQuery(title)
+  }
+
+  const handleSearchWithQuery = async (query: string) => {
+    if (!query.trim()) return
+
+    try {
+      setSearching(true)
+      setShowSuggestions(false)
+      const response = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      })
+      const data = await response.json()
+
+      if (data.error) {
+        console.error("Search API Error:", data.error)
+        setMovies([])
+        return
+      }
+
+      let searchResults = []
+      if (data.data && data.data.subjectList && Array.isArray(data.data.subjectList)) {
+        searchResults = data.data.subjectList
+      } else if (data.data && Array.isArray(data.data)) {
+        searchResults = data.data
+      } else if (Array.isArray(data)) {
+        searchResults = data
+      }
+
+      if (searchResults.length > 0) {
+        const formattedMovies = searchResults.map((item: any) => ({
+          id: item.id || item.subjectId || Math.random().toString(),
+          title: item.title || item.name || "Unknown",
+          poster: item.cover?.url || item.poster || item.coverUrl,
+          rating: item.rating || item.score,
+          year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : item.year,
+          description: item.description || item.intro,
           subjectId: item.subjectId,
           detailPath: item.detailPath,
         }))
         setMovies(formattedMovies)
+      } else {
+        setMovies([])
       }
     } catch (error) {
       console.error("Error searching movies:", error)
+      setMovies([])
     } finally {
       setSearching(false)
     }
+  }
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault()
+    handleSearchWithQuery(searchQuery)
   }
 
   return (
@@ -128,10 +189,31 @@ export default function MoviesPage() {
               <Input
                 placeholder="Search movies, TV series..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchInputChange(e.target.value)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onFocus={() => searchQuery.length >= 2 && suggestions.length > 0 && setShowSuggestions(true)}
                 className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400 pl-10"
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="px-4 py-2 hover:bg-slate-700 cursor-pointer text-white border-b border-slate-700 last:border-0"
+                    >
+                      <div className="font-medium">{suggestion.title || suggestion.name}</div>
+                      {suggestion.releaseDate && (
+                        <div className="text-xs text-slate-400">
+                          {new Date(suggestion.releaseDate).getFullYear()}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <Button type="submit" disabled={searching} className="bg-blue-600 hover:bg-blue-700">
               {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}

@@ -145,57 +145,78 @@ async def fetch_item_details(item_id: str, item_type: str) -> dict:
         return {"error": str(e), "creator": "God's Zeal"}
 
 
-async def fetch_downloads(item_id: str, item_type: str, season: int = 0, episode: int = 0) -> dict:
+async def fetch_downloads(subject_id: str, detail_path: str, season: int = 0, episode: int = 0) -> dict:
     """Fetch download links for a specific item"""
     try:
         session = Session()
         
-        # This would require getting the item first
-        # For now, return a structured response
+        from moviebox_api.models import SearchResultsItem
+        item = SearchResultsItem(subjectId=subject_id, detailPath=detail_path)
+        
+        downloads = DownloadableMovieFilesDetail(session, item) if season == 0 and episode == 0 else DownloadableTVSeriesFilesDetail(session, item)
+        
+        content = await downloads.get_content() if season == 0 and episode == 0 else await downloads.get_content(season, episode)
+        
         return {
             "creator": "God's Zeal",
             "endpoint": "/api/downloads",
-            "itemId": item_id,
-            "itemType": item_type,
+            "subjectId": subject_id,
+            "detailPath": detail_path,
             "season": season,
             "episode": episode,
-            "message": "Download links would be fetched here",
+            "data": content,
         }
     except Exception as e:
         return {"error": str(e), "creator": "God's Zeal"}
 
 
-async def fetch_subtitles(item_id: str, item_type: str, season: int = 0, episode: int = 0) -> dict:
+async def fetch_subtitles(subject_id: str, detail_path: str, season: int = 0, episode: int = 0) -> dict:
     """Fetch available subtitles for a specific item"""
     try:
         session = Session()
         
+        from moviebox_api.models import SearchResultsItem
+        item = SearchResultsItem(subjectId=subject_id, detailPath=detail_path)
+        
+        downloads = DownloadableMovieFilesDetail(session, item) if season == 0 and episode == 0 else DownloadableTVSeriesFilesDetail(session, item)
+        
+        content = await downloads.get_content() if season == 0 and episode == 0 else await downloads.get_content(season, episode)
+        
+        subtitles = content.get('subtitles', content.get('captionFiles', []))
+        
         return {
             "creator": "God's Zeal",
             "endpoint": "/api/subtitles",
-            "itemId": item_id,
-            "itemType": item_type,
+            "subjectId": subject_id,
+            "detailPath": detail_path,
             "season": season,
             "episode": episode,
-            "message": "Subtitles would be fetched here",
+            "data": {"subtitles": subtitles, "allData": content},
         }
     except Exception as e:
         return {"error": str(e), "creator": "God's Zeal"}
 
 
-async def fetch_stream(item_id: str, item_type: str, season: int = 0, episode: int = 0) -> dict:
+async def fetch_stream(subject_id: str, detail_path: str, season: int = 0, episode: int = 0) -> dict:
     """Fetch streaming links for a specific item"""
     try:
         session = Session()
         
+        from moviebox_api.models import SearchResultsItem
+        item = SearchResultsItem(subjectId=subject_id, detailPath=detail_path)
+        
+        stream = StreamableMovieFilesDetail(session, item) if season == 0 and episode == 0 else StreamableTVSeriesFilesDetail(session, item)
+        
+        content = await stream.get_content() if season == 0 and episode == 0 else await stream.get_content(season, episode)
+        
         return {
             "creator": "God's Zeal",
             "endpoint": "/api/stream",
-            "itemId": item_id,
-            "itemType": item_type,
+            "subjectId": subject_id,
+            "detailPath": detail_path,
             "season": season,
             "episode": episode,
-            "message": "Stream links would be fetched here",
+            "data": content,
         }
     except Exception as e:
         return {"error": str(e), "creator": "God's Zeal"}
@@ -239,25 +260,25 @@ async def main():
             result = await fetch_item_details(item_id, item_type)
         
         elif command == "downloads":
-            item_id = sys.argv[2] if len(sys.argv) > 2 else ""
-            item_type = sys.argv[3] if len(sys.argv) > 3 else "MOVIE"
+            subject_id = sys.argv[2] if len(sys.argv) > 2 else ""
+            detail_path = sys.argv[3] if len(sys.argv) > 3 else ""
             season = int(sys.argv[4]) if len(sys.argv) > 4 else 0
             episode = int(sys.argv[5]) if len(sys.argv) > 5 else 0
-            result = await fetch_downloads(item_id, item_type, season, episode)
+            result = await fetch_downloads(subject_id, detail_path, season, episode)
         
         elif command == "subtitles":
-            item_id = sys.argv[2] if len(sys.argv) > 2 else ""
-            item_type = sys.argv[3] if len(sys.argv) > 3 else "MOVIE"
+            subject_id = sys.argv[2] if len(sys.argv) > 2 else ""
+            detail_path = sys.argv[3] if len(sys.argv) > 3 else ""
             season = int(sys.argv[4]) if len(sys.argv) > 4 else 0
             episode = int(sys.argv[5]) if len(sys.argv) > 5 else 0
-            result = await fetch_subtitles(item_id, item_type, season, episode)
+            result = await fetch_subtitles(subject_id, detail_path, season, episode)
         
         elif command == "stream":
-            item_id = sys.argv[2] if len(sys.argv) > 2 else ""
-            item_type = sys.argv[3] if len(sys.argv) > 3 else "MOVIE"
+            subject_id = sys.argv[2] if len(sys.argv) > 2 else ""
+            detail_path = sys.argv[3] if len(sys.argv) > 3 else ""
             season = int(sys.argv[4]) if len(sys.argv) > 4 else 0
             episode = int(sys.argv[5]) if len(sys.argv) > 5 else 0
-            result = await fetch_stream(item_id, item_type, season, episode)
+            result = await fetch_stream(subject_id, detail_path, season, episode)
         
         else:
             result = {"error": f"Unknown command: {command}", "creator": "God's Zeal"}

@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { movieBoxClient } from "@/lib/moviebox-client"
+import { execFile } from "child_process"
+import { promisify } from "util"
+
+const execFileAsync = promisify(execFile)
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,17 +17,26 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const response = await movieBoxClient.getDownloads(subjectId, detailPath, season, episode)
-
-      return NextResponse.json({
-        creator: "God's Zeal",
-        endpoint: "/api/downloads",
+      const { stdout, stderr } = await execFileAsync("python3", [
+        "scripts/moviebox_wrapper.py",
+        "downloads",
         subjectId,
         detailPath,
-        season,
-        episode,
-        data: response,
-      })
+        String(season),
+        String(episode),
+      ])
+
+      if (stderr) {
+        console.error("Python script stderr:", stderr)
+      }
+
+      const response = JSON.parse(stdout)
+      
+      if (response.error) {
+        return NextResponse.json(response, { status: 500 })
+      }
+
+      return NextResponse.json(response)
     } catch (error) {
       console.error("MovieBox API error:", error)
       return NextResponse.json(
