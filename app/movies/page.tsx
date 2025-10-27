@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Search, Play, Download } from "lucide-react"
 import Link from "next/link"
+import { TrendingCarousel } from "@/components/movies/trending-carousel"
 
 interface Movie {
   id: string
@@ -23,11 +24,13 @@ interface Movie {
 
 export default function MoviesPage() {
   const [movies, setMovies] = useState<Movie[]>([])
+  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [searching, setSearching] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
 
   useEffect(() => {
     fetchTrendingMovies()
@@ -42,6 +45,7 @@ export default function MoviesPage() {
       if (data.error) {
         console.error("[v0] API Error:", data.error)
         setMovies([])
+        setTrendingMovies([])
         return
       }
 
@@ -65,13 +69,18 @@ export default function MoviesPage() {
           subjectId: item.subjectId,
           detailPath: item.detailPath,
         }))
-        setMovies(formattedMovies)
+        setTrendingMovies(formattedMovies)
+        if (!showSearchResults) {
+          setMovies(formattedMovies)
+        }
       } else {
         setMovies([])
+        setTrendingMovies([])
       }
     } catch (error) {
       console.error("[v0] Error fetching trending movies:", error)
       setMovies([])
+      setTrendingMovies([])
     } finally {
       setLoading(false)
     }
@@ -114,11 +123,16 @@ export default function MoviesPage() {
   }
 
   const handleSearchWithQuery = async (query: string) => {
-    if (!query.trim()) return
+    if (!query.trim()) {
+      setShowSearchResults(false)
+      setMovies(trendingMovies)
+      return
+    }
 
     try {
       setSearching(true)
       setShowSuggestions(false)
+      setShowSearchResults(true)
       const response = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -229,8 +243,17 @@ export default function MoviesPage() {
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {movies.map((movie) => (
+          <div className="space-y-12">
+            {!showSearchResults && trendingMovies.length > 0 && (
+              <TrendingCarousel items={trendingMovies.slice(0, 10)} title="Trending Now" />
+            )}
+
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-6">
+                {showSearchResults ? "Search Results" : "All Movies & Series"}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {movies.map((movie) => (
               <Link key={movie.id} href={`/movies/${movie.detailPath}`}>
                 <Card className="bg-slate-800 border-slate-700 hover:border-blue-500 transition-all cursor-pointer h-full overflow-hidden group">
                   <div className="relative overflow-hidden bg-slate-900 aspect-video">
@@ -266,7 +289,9 @@ export default function MoviesPage() {
                   </CardContent>
                 </Card>
               </Link>
-            ))}
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </main>

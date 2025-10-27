@@ -23,7 +23,7 @@ from src.moviebox_api.core import (
 from src.moviebox_api.requests import Session
 from src.moviebox_api.constants import SubjectType
 from src.moviebox_api.download import DownloadableMovieFilesDetail, DownloadableTVSeriesFilesDetail
-from src.moviebox_api.stream import StreamableMovieFilesDetail, StreamableTVSeriesFilesDetail
+from src.moviebox_api.stream import StreamFilesDetail
 
 
 async def fetch_search(query: str, subject_type: str = "ALL", page: int = 1, per_page: int = 24) -> dict:
@@ -205,9 +205,9 @@ async def fetch_stream(subject_id: str, detail_path: str, season: int = 0, episo
         from moviebox_api.models import SearchResultsItem
         item = SearchResultsItem(subjectId=subject_id, detailPath=detail_path)
         
-        stream = StreamableMovieFilesDetail(session, item) if season == 0 and episode == 0 else StreamableTVSeriesFilesDetail(session, item)
+        stream = StreamFilesDetail(session, item)
         
-        content = await stream.get_content() if season == 0 and episode == 0 else await stream.get_content(season, episode)
+        content = await stream.get_content(season, episode)
         
         return {
             "creator": "God's Zeal",
