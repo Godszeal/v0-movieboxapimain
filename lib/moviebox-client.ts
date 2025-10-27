@@ -1,6 +1,13 @@
 /**
  * TypeScript client for MovieBox API
  * Replicates the Python moviebox_api functionality with proper cookie and header handling
+ *
+ * NOTE: This file preserves the original script format and function names while improving:
+ * - cookie parsing & sending,
+ * - safer default headers (no manual Host header),
+ * - informative logging of non-OK responses (shows body and headers),
+ * - automatic mirror-host fallback (tries SELECTED_HOST then other MIRROR_HOSTS),
+ * - consistent handling for downloads, streams, and subtitles.
  */
 
 const globalCookieStore: Record<string, string> = {}
@@ -22,10 +29,10 @@ const HOST_URL = `${HOST_PROTOCOL}://${SELECTED_HOST}/`
 const DEFAULT_REQUEST_HEADERS = {
   "X-Client-Info": '{"timezone":"Africa/Nairobi"}',
   "Accept-Language": "en-US,en;q=0.5",
-  Accept: "application/json",
+  Accept: "application/json, text/plain, */*",
   "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0",
   Referer: HOST_URL,
-  Host: SELECTED_HOST,
+  Origin: HOST_URL, // added Origin; removed manual Host header to avoid host mismatch issues
 }
 
 export enum SubjectType {
@@ -52,6 +59,62 @@ function processApiResponse(json: ApiResponse): any {
   throw new Error(`Unsuccessful response from server: ${json.message || "Unknown error"}`)
 }
 
+/** Safely read text body from Response */
+async function safeText(res: Response) {
+  try {
+    return await res.text()
+  } catch (e) {
+    return `<failed to read body: ${String(e)}>`
+  }
+}
+
+/** Parse Set-Cookie header string(s) and merge into globalCookieStore */
+function parseAndStoreSetCookie(setCookieHeader: string | null) {
+  if (!setCookieHeader) return
+  try {
+    // split by comma that precedes a new cookie (heuristic)
+    const parts = setCookieHeader
+      .split(/,(?=[^;=]+=[^;=]+)/g)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    for (const c of parts) {
+      const kv = c.split(";")[0].trim()
+      const eq = kv.indexOf("=")
+      if (eq > 0) {
+        const key = kv.slice(0, eq).trim()
+        const val = kv.slice(eq + 1).trim()
+        if (key) globalCookieStore[key] = val
+      }
+    }
+  } catch (e) {
+    console.warn("[moviebox-client] failed to parse set-cookie header", e)
+  }
+}
+
+function buildCookieHeader(): string {
+  return Object.entries(globalCookieStore)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("; ")
+}
+
+/** Replace hostname in a full URL string with a provided host (preserves protocol/path/query) */
+function replaceHostInUrl(fullUrl: string, host: string) {
+  try {
+    const u = new URL(fullUrl)
+    u.hostname = host
+    // ensure port removed if host didn't include it
+    u.port = ""
+    return u.toString()
+  } catch (e) {
+    // If not a full URL, build with host as base
+    if (fullUrl.startsWith("/")) {
+      return `${HOST_PROTOCOL}://${host}${fullUrl}`
+    }
+    // fallback - return the original
+    return fullUrl
+  }
+}
+
 export class MovieBoxClient {
   private appInfoFetched = false
 
@@ -65,25 +128,39 @@ export class MovieBoxClient {
   private async fetchAppInfo(): Promise<void> {
     try {
       const url = getAbsoluteUrl("/wefeed-h5-bff/app/get-latest-app-pkgs?app_name=moviebox")
+      const headers = {
+        ...DEFAULT_REQUEST_HEADERS,
+      }
       const response = await fetch(url, {
-        headers: DEFAULT_REQUEST_HEADERS,
+        headers,
         credentials: "include",
       })
 
-      if (response.ok) {
-        const setCookieHeader = response.headers.get("set-cookie")
-        if (setCookieHeader) {
-          const cookies = setCookieHeader.split(",")
-          cookies.forEach((cookie) => {
-            const parts = cookie.split(";")[0].split("=")
-            if (parts.length === 2) {
-              globalCookieStore[parts[0].trim()] = parts[1].trim()
-            }
-          })
-        }
+      // Always attempt to parse set-cookie even if response not ok, so we can learn what's returned
+      const setCookieHeader = response.headers.get("set-cookie") || response.headers.get("Set-Cookie")
+      if (setCookieHeader) {
+        parseAndStoreSetCookie(setCookieHeader)
+      }
 
-        const json = await response.json()
+      const text = await safeText(response)
+      // Log for debugging on non-ok
+      if (!response.ok) {
+        console.warn("[v0] fetchAppInfo non-ok response", {
+          url,
+          status: response.status,
+          headers: Array.from(response.headers.entries()),
+          body: text.slice(0, 500),
+        })
+        return
+      }
+
+      // try parse json only when ok
+      try {
+        const json = JSON.parse(text)
         processApiResponse(json)
+      } catch (e) {
+        // may be HTML or text — just warn
+        console.warn("[v0] fetchAppInfo returned non-JSON body", text.slice(0, 500))
       }
     } catch (error) {
       console.error("[v0] Error fetching app info:", error)
@@ -91,11 +168,13 @@ export class MovieBoxClient {
   }
 
   private buildCookieHeader(): string {
-    return Object.entries(globalCookieStore)
-      .map(([key, value]) => `${key}=${value}`)
-      .join("; ")
+    return buildCookieHeader()
   }
 
+  /**
+   * Generic GET - preserves original behavior but now logs response body on non-OK for easier debugging.
+   * Does not automatically attach cookies (use getWithCookies for cookie-authenticated endpoints).
+   */
   async get(url: string, params?: Record<string, any>, customHeaders?: Record<string, string>): Promise<Response> {
     const urlObj = new URL(url)
     if (params) {
@@ -115,7 +194,10 @@ export class MovieBoxClient {
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      // include body for debugging
+      const body = await safeText(response)
+      console.error(`[moviebox-client] GET ${urlObj.toString()} returned ${response.status}`, body.slice(0, 500))
+      throw new Error(`HTTP error! status: ${response.status} body: ${body.slice(0, 200)}`)
     }
 
     return response
@@ -127,6 +209,13 @@ export class MovieBoxClient {
     return processApiResponse(json)
   }
 
+  /**
+   * getWithCookies:
+   * - ensures cookies are assigned,
+   * - attaches cookie header,
+   * - tries SELECTED_HOST first then other MIRROR_HOSTS if we receive non-ok (403/4xx/5xx) responses,
+   * - logs useful info on non-ok responses.
+   */
   async getWithCookies(
     url: string,
     params?: Record<string, any>,
@@ -134,29 +223,81 @@ export class MovieBoxClient {
   ): Promise<Response> {
     await this.ensureCookiesAssigned()
 
-    const urlObj = new URL(url)
+    // Build the initial URL (may be absolute or relative)
+    let originalUrl = url
+    if (url.startsWith("/")) {
+      originalUrl = getAbsoluteUrl(url)
+    }
+
     if (params) {
+      const u = new URL(originalUrl)
       Object.entries(params).forEach(([key, value]) => {
-        urlObj.searchParams.append(key, String(value))
+        u.searchParams.set(key, String(value))
       })
+      originalUrl = u.toString()
     }
 
-    const headers = {
-      ...DEFAULT_REQUEST_HEADERS,
-      Cookie: this.buildCookieHeader(),
-      ...customHeaders,
+    // Hosts to try: SELECTED_HOST first, then the other MIRROR_HOSTS (preserve user's configured mirrors)
+    const hostsToTry = [SELECTED_HOST, ...MIRROR_HOSTS.filter((h) => h !== SELECTED_HOST)]
+
+    let lastError: any = null
+    for (const host of hostsToTry) {
+      const tryUrl = replaceHostInUrl(originalUrl, host)
+      const hostBase = `${HOST_PROTOCOL}://${host}`
+
+      const headers = {
+        ...DEFAULT_REQUEST_HEADERS,
+        Referer: customHeaders?.Referer || DEFAULT_REQUEST_HEADERS.Referer,
+        Origin: hostBase,
+        ...customHeaders,
+      } as Record<string, string>
+
+      const cookieHeader = this.buildCookieHeader()
+      if (cookieHeader) {
+        headers.Cookie = cookieHeader
+      }
+
+      try {
+        const response = await fetch(tryUrl, {
+          headers,
+          credentials: "include",
+        })
+
+        // merge any set-cookie header into globalCookieStore for subsequent requests
+        const sc = response.headers.get("set-cookie") || response.headers.get("Set-Cookie")
+        if (sc) {
+          parseAndStoreSetCookie(sc)
+        }
+
+        if (response.ok) {
+          return response
+        }
+
+        // non-ok: log useful info and try next mirror
+        const body = await safeText(response)
+        console.warn("[moviebox-client] non-ok response from host", {
+          host,
+          tryUrl,
+          status: response.status,
+          headers: Array.from(response.headers.entries()),
+          body: body.slice(0, 1000),
+        })
+
+        // If it's a specific 403 we attempt next mirror; for 5xx we also try next mirror
+        lastError = new Error(`Host ${host} returned ${response.status}: ${body.slice(0, 300)}`)
+        // continue to next host
+      } catch (err) {
+        console.error(`[moviebox-client] fetch error for host ${host}`, err)
+        lastError = err
+        // continue to next host
+      }
     }
 
-    const response = await fetch(urlObj.toString(), {
-      headers,
-      credentials: "include",
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    // All hosts tried and failed
+    if (lastError) {
+      throw lastError
     }
-
-    return response
+    throw new Error(`All MovieBox hosts attempted and failed: ${hostsToTry.join(", ")}`)
   }
 
   async getWithCookiesFromApi(
@@ -165,11 +306,17 @@ export class MovieBoxClient {
     customHeaders?: Record<string, string>,
   ): Promise<any> {
     const response = await this.getWithCookies(url, params, customHeaders)
-    const json = await response.json()
-    if (json.code !== undefined && json.message !== undefined) {
-      return processApiResponse(json)
+    const text = await safeText(response)
+    try {
+      const json = JSON.parse(text)
+      if (json.code !== undefined && json.message !== undefined) {
+        return processApiResponse(json)
+      }
+      return json
+    } catch (e) {
+      // non-json response
+      throw new Error(`MovieBox API invalid JSON response (status ${response.status}): ${text}`)
     }
-    return json
   }
 
   async post(url: string, data: Record<string, any>, customHeaders?: Record<string, string>): Promise<Response> {
@@ -178,8 +325,12 @@ export class MovieBoxClient {
     const headers = {
       ...DEFAULT_REQUEST_HEADERS,
       "Content-Type": "application/json",
-      Cookie: this.buildCookieHeader(),
       ...customHeaders,
+    }
+
+    const cookieHeader = this.buildCookieHeader()
+    if (cookieHeader) {
+      ;(headers as any).Cookie = cookieHeader
     }
 
     const response = await fetch(url, {
@@ -190,8 +341,14 @@ export class MovieBoxClient {
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const body = await safeText(response)
+      console.error(`[moviebox-client] POST ${url} returned ${response.status}`, body.slice(0, 500))
+      throw new Error(`HTTP error! status: ${response.status} body: ${body.slice(0, 200)}`)
     }
+
+    // store cookies if any
+    const sc = response.headers.get("set-cookie") || response.headers.get("Set-Cookie")
+    if (sc) parseAndStoreSetCookie(sc)
 
     return response
   }
@@ -262,8 +419,15 @@ export class MovieBoxClient {
     const customHeaders = {
       Referer: getAbsoluteUrl(`/movies/${detailPath}`),
     }
-    const response = await this.getWithCookies(url, params, customHeaders)
-    return response.json()
+    try {
+      const response = await this.getWithCookies(url, params, customHeaders)
+      const json = await response.json()
+      return json
+    } catch (err) {
+      // Provide more context on failure
+      console.error("[moviebox-client] getDownloads failed", { subjectId, detailPath, error: err })
+      throw err
+    }
   }
 
   async getSubtitles(subjectId: string, detailPath: string, season = 0, episode = 0): Promise<any> {
@@ -276,8 +440,14 @@ export class MovieBoxClient {
     const customHeaders = {
       Referer: getAbsoluteUrl(`/movies/${detailPath}`),
     }
-    const response = await this.getWithCookies(url, params, customHeaders)
-    return response.json()
+    try {
+      const response = await this.getWithCookies(url, params, customHeaders)
+      const json = await response.json()
+      return json
+    } catch (err) {
+      console.error("[moviebox-client] getSubtitles failed", { subjectId, detailPath, error: err })
+      throw err
+    }
   }
 
   async getStream(subjectId: string, detailPath: string, season = 0, episode = 0): Promise<any> {
@@ -290,8 +460,14 @@ export class MovieBoxClient {
     const customHeaders = {
       Referer: getAbsoluteUrl(`/movies/${detailPath}`),
     }
-    const response = await this.getWithCookies(url, params, customHeaders)
-    return response.json()
+    try {
+      const response = await this.getWithCookies(url, params, customHeaders)
+      const json = await response.json()
+      return json
+    } catch (err) {
+      console.error("[moviebox-client] getStream failed", { subjectId, detailPath, error: err })
+      throw err
+    }
   }
 
   async getItemDetails(detailPath: string): Promise<any> {
