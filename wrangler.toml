@@ -1,0 +1,38 @@
+# wrangler.toml — configuration for Cloudflare deployment
+
+name = "moviebox"
+# For Cloudflare Pages, leave this as your Pages project name
+# For Cloudflare Workers, this becomes your worker name
+
+# This date locks your runtime compatibility features.
+# You can update to the latest date periodically.
+compatibility_date = "2025-11-01"
+
+# Use this if you are deploying to Cloudflare Pages
+pages_build_output_dir = ".vercel/output/static"
+
+# Optional: enable usage of node_compat for Node.js modules that need it
+# Uncomment if you use 'fs', 'path', or other Node APIs
+# node_compat = true
+
+# Environment variables (if any)
+# Add your runtime variables here or directly in the Cloudflare dashboard.
+[vars]
+NODE_ENV = "production"
+NEXT_TELEMETRY_DISABLED = "1"
+
+# Optional build config — helps if you run build manually with wrangler
+[build]
+command = "npx @cloudflare/next-on-pages build"
+
+# Optional: Configure environments (preview, production)
+[env.preview]
+pages_build_output_dir = ".vercel/output/static"
+[env.production]
+pages_build_output_dir = ".vercel/output/static"
+
+# Optional: if you use KV, D1, R2, or other Cloudflare bindings
+# Add them here if your app uses them
+# [[kv_namespaces]]
+# binding = "MOVIEBOX_KV"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
