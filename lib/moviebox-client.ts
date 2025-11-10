@@ -71,22 +71,19 @@ export class MovieBoxClient {
       })
 
       if (response.ok) {
-        const setCookieHeader = response.headers.get("set-cookie")
-        if (setCookieHeader) {
-          const cookies = setCookieHeader.split(",")
-          cookies.forEach((cookie) => {
-            const parts = cookie.split(";")[0].split("=")
-            if (parts.length === 2) {
-              globalCookieStore[parts[0].trim()] = parts[1].trim()
-            }
-          })
-        }
+        const setCookieHeaders = response.headers.getSetCookie?.() || []
+        setCookieHeaders.forEach((cookie) => {
+          const parts = cookie.split(";")[0].split("=")
+          if (parts.length === 2) {
+            globalCookieStore[parts[0].trim()] = parts[1].trim()
+          }
+        })
 
         const json = await response.json()
         processApiResponse(json)
       }
     } catch (error) {
-      console.warn("Failed to fetch app info, continuing without cookies")
+      console.warn("Failed to fetch app info, continuing without cookies:", error)
     }
   }
 
@@ -149,11 +146,11 @@ export class MovieBoxClient {
     }
 
     let lastError: Error | null = null
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       try {
         const response = await fetch(urlObj.toString(), {
           headers,
-          cache: "no-store", // Don't cache authenticated requests
+          cache: "no-store",
         })
 
         if (!response.ok) {
@@ -162,14 +159,16 @@ export class MovieBoxClient {
 
         return response
       } catch (error) {
+        console.error(`[v0] Attempt ${attempt + 1} failed:`, error)
         lastError = error as Error
-        if (attempt < 2) {
-          await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)))
+        if (attempt < 4) {
+          const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 10000)
+          await new Promise((resolve) => setTimeout(resolve, delay))
         }
       }
     }
 
-    throw lastError || new Error("Request failed after 3 attempts")
+    throw lastError || new Error("Request failed after 5 attempts")
   }
 
   async getWithCookiesFromApi(

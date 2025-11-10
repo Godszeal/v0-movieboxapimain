@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
+import { Copy, Check } from "lucide-react"
 import ResponseViewer from "./response-viewer"
 
 export default function SubtitlesExplorer() {
@@ -14,6 +15,7 @@ export default function SubtitlesExplorer() {
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [copiedUrl, setCopiedUrl] = useState(false)
 
   const handleFetch = async () => {
     if (!subjectId.trim() || !detailPath.trim()) {
@@ -39,6 +41,25 @@ export default function SubtitlesExplorer() {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const copyEndpointUrl = async () => {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+    const params = new URLSearchParams({
+      subjectId,
+      detailPath,
+      season,
+      episode,
+    })
+    const fullUrl = `${baseUrl}/api/subtitles?${params.toString()}`
+
+    try {
+      await navigator.clipboard.writeText(fullUrl)
+      setCopiedUrl(true)
+      setTimeout(() => setCopiedUrl(false), 2000)
+    } catch (err) {
+      console.error("Failed to copy:", err)
     }
   }
 
@@ -95,16 +116,37 @@ export default function SubtitlesExplorer() {
         </div>
       </div>
 
-      <Button onClick={handleFetch} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-        {loading ? (
-          <>
-            <Spinner className="mr-2 h-4 w-4" />
-            Fetching...
-          </>
-        ) : (
-          "Get Subtitles"
-        )}
-      </Button>
+      <div className="flex gap-3">
+        <Button onClick={handleFetch} disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+          {loading ? (
+            <>
+              <Spinner className="mr-2 h-4 w-4" />
+              Fetching...
+            </>
+          ) : (
+            "Get Subtitles"
+          )}
+        </Button>
+
+        <Button
+          onClick={copyEndpointUrl}
+          disabled={!subjectId.trim() || !detailPath.trim()}
+          variant="outline"
+          className="bg-slate-700 hover:bg-slate-600 text-white border-slate-600"
+        >
+          {copiedUrl ? (
+            <>
+              <Check className="mr-2 h-4 w-4" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="mr-2 h-4 w-4" />
+              Copy URL
+            </>
+          )}
+        </Button>
+      </div>
 
       {error && <div className="bg-red-900/20 border border-red-700 text-red-400 px-4 py-3 rounded">{error}</div>}
 
