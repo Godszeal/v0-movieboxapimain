@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -37,39 +36,23 @@ export default function MoviesPage() {
       const response = await fetch("/api/trending")
       const data = await response.json()
 
-      if (data.error) {
-        console.error("[v0] API Error:", data.error)
-        setMovies([])
-        return
-      }
-
-      let movieList = []
-      if (data.data && data.data.subjectList && Array.isArray(data.data.subjectList)) {
-        movieList = data.data.subjectList
-      } else if (Array.isArray(data.data)) {
-        movieList = data.data
-      } else if (Array.isArray(data)) {
-        movieList = data
-      }
+      const movieList = data.data?.data?.subjectList || data.data?.subjectList || []
 
       if (movieList.length > 0) {
         const formattedMovies = movieList.map((item: any) => ({
-          id: item.id || item.subjectId || Math.random().toString(),
-          title: item.title || item.name || "Unknown",
-          poster: item.cover?.url || item.poster || item.coverUrl,
-          rating: item.rating || item.score,
-          year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : item.year,
-          description: item.description || item.intro,
+          id: item.subjectId || Math.random().toString(),
+          title: item.title || "Unknown",
+          poster: item.cover?.url,
+          rating: Number.parseFloat(item.imdbRatingValue) || 0,
+          year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : null,
+          description: item.description,
           subjectId: item.subjectId,
           detailPath: item.detailPath,
         }))
         setMovies(formattedMovies)
-      } else {
-        setMovies([])
       }
     } catch (error) {
-      console.error("[v0] Error fetching trending movies:", error)
-      setMovies([])
+      console.error("Error fetching trending movies:", error)
     } finally {
       setLoading(false)
     }
@@ -88,21 +71,16 @@ export default function MoviesPage() {
       })
       const data = await response.json()
 
-      let movieList = []
-      if (data.data && data.data.subjectList && Array.isArray(data.data.subjectList)) {
-        movieList = data.data.subjectList
-      } else if (Array.isArray(data.data)) {
-        movieList = data.data
-      }
+      const movieList = data.data?.items || []
 
       if (movieList.length > 0) {
         const formattedMovies = movieList.map((item: any) => ({
-          id: item.id || item.subjectId || Math.random().toString(),
-          title: item.title || item.name || "Unknown",
-          poster: item.cover?.url || item.poster || item.coverUrl,
-          rating: item.rating || item.score,
-          year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : item.year,
-          description: item.description || item.intro,
+          id: item.subjectId || Math.random().toString(),
+          title: item.title || "Unknown",
+          poster: item.cover?.url,
+          rating: Number.parseFloat(item.imdbRatingValue) || 0,
+          year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : null,
+          description: item.description,
           subjectId: item.subjectId,
           detailPath: item.detailPath,
         }))
@@ -201,7 +179,9 @@ export default function MoviesPage() {
                           {movie.year}
                         </Badge>
                       )}
-                      {movie.rating && <Badge className="bg-yellow-600 text-xs">{movie.rating}★</Badge>}
+                      {movie.rating && movie.rating > 0 && (
+                        <Badge className="bg-yellow-600 text-xs">{movie.rating}★</Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

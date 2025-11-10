@@ -22,13 +22,14 @@ export default function ProxyTest() {
       const proxyUrl = `/api/proxy?url=${encodeURIComponent(testUrl)}`
 
       const response = await fetch(proxyUrl)
+
       const data = await response.json()
 
-      if (response.ok && (data.success || response.status === 200)) {
+      if (response.ok && data.success) {
         setResult({
           success: true,
           message: "Proxy is working correctly!",
-          details: `Status: ${response.status}, Content-Type: ${response.headers.get("content-type")}`,
+          details: `Status: ${response.status}, Content-Type: ${data.contentType || "N/A"}`,
         })
       } else {
         setResult({
@@ -49,15 +50,19 @@ export default function ProxyTest() {
   }
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6 space-y-4">
+    <div className="bg-slate-800 rounded-lg p-4 sm:p-6 space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Proxy Status Test</h3>
-        <p className="text-sm text-slate-400">
+        <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Proxy Status Test</h3>
+        <p className="text-xs sm:text-sm text-slate-400">
           Test if the geo-restriction bypass proxy is working correctly on your deployment.
         </p>
       </div>
 
-      <Button onClick={testProxy} disabled={testing} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+      <Button
+        onClick={testProxy}
+        disabled={testing}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base"
+      >
         {testing ? (
           <>
             <Spinner className="mr-2 h-4 w-4" />
@@ -70,32 +75,32 @@ export default function ProxyTest() {
 
       {result && (
         <div
-          className={`p-4 rounded-lg border ${
+          className={`p-3 sm:p-4 rounded-lg border text-sm ${
             result.success
               ? "bg-green-900/20 border-green-700 text-green-300"
               : "bg-red-900/20 border-red-700 text-red-300"
           }`}
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-2 sm:gap-3">
             {result.success ? (
-              <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" />
             ) : (
-              <XCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <XCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" />
             )}
-            <div className="flex-1">
-              <p className="font-semibold">{result.message}</p>
-              {result.details && <p className="text-sm mt-1 opacity-90">{result.details}</p>}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm sm:text-base">{result.message}</p>
+              {result.details && <p className="text-xs sm:text-sm mt-1 opacity-90 break-words">{result.details}</p>}
             </div>
           </div>
         </div>
       )}
 
-      <div className="bg-blue-900/20 border border-blue-700 text-blue-300 px-4 py-3 rounded text-sm">
+      <div className="bg-blue-900/20 border border-blue-700 text-blue-300 px-3 sm:px-4 py-2 sm:py-3 rounded text-xs sm:text-sm">
         <div className="flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-          <div>
+          <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
             <p className="font-semibold mb-1">About the Proxy</p>
-            <p className="text-xs">
+            <p className="text-xs break-words">
               The proxy bypasses geo-restrictions on CDN content that may be blocked in EU and North America regions. It
               routes requests through whitelisted regions like Singapore and Nigeria.
             </p>
