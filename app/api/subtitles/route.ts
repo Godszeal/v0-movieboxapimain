@@ -1,8 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { execFile } from "child_process"
-import { promisify } from "util"
+import { movieBoxClient } from "@/lib/moviebox-client"
+import { proxyUrls } from "@/lib/proxy-helper"
 
-const execFileAsync = promisify(execFile)
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+}
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders })
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,31 +20,28 @@ export async function POST(request: NextRequest) {
     if (!subjectId || !detailPath) {
       return NextResponse.json(
         { error: "subjectId and detailPath are required", creator: "God's Zeal" },
-        { status: 400 },
+        { status: 400, headers: corsHeaders },
       )
     }
 
     try {
-      const { stdout, stderr } = await execFileAsync("python3", [
-        "scripts/moviebox_wrapper.py",
-        "subtitles",
-        subjectId,
-        detailPath,
-        String(season),
-        String(episode),
-      ])
+      const response = await movieBoxClient.getSubtitles(subjectId, detailPath, season, episode)
 
-      if (stderr) {
-        console.error("Python script stderr:", stderr)
-      }
+      const proxiedResponse = proxyUrls(response)
 
-      const response = JSON.parse(stdout)
-      
-      if (response.error) {
-        return NextResponse.json(response, { status: 500 })
-      }
-
-      return NextResponse.json(response)
+      return NextResponse.json(
+        {
+          creator: "God's Zeal",
+          endpoint: "/api/subtitles",
+          subjectId,
+          detailPath,
+          requestedLanguage: language,
+          season,
+          episode,
+          data: proxiedResponse,
+        },
+        { headers: corsHeaders },
+      )
     } catch (error) {
       console.error("MovieBox API error:", error)
       return NextResponse.json(
@@ -50,10 +55,13 @@ export async function POST(request: NextRequest) {
           episode,
           error: error instanceof Error ? error.message : "API request failed",
         },
-        { status: 500 },
+        { status: 500, headers: corsHeaders },
       )
     }
   } catch (error) {
-    return NextResponse.json({ error: "Invalid request body", creator: "God's Zeal" }, { status: 400 })
+    return NextResponse.json(
+      { error: "Invalid request body", creator: "God's Zeal" },
+      { status: 400, headers: corsHeaders },
+    )
   }
 }

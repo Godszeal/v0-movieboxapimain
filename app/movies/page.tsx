@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Search, Play, Download } from "lucide-react"
 import Link from "next/link"
-import { TrendingCarousel } from "@/components/movies/trending-carousel"
 
 interface Movie {
   id: string
@@ -24,13 +23,9 @@ interface Movie {
 
 export default function MoviesPage() {
   const [movies, setMovies] = useState<Movie[]>([])
-  const [trendingMovies, setTrendingMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [searching, setSearching] = useState(false)
-  const [suggestions, setSuggestions] = useState<any[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [showSearchResults, setShowSearchResults] = useState(false)
 
   useEffect(() => {
     fetchTrendingMovies()
@@ -45,7 +40,6 @@ export default function MoviesPage() {
       if (data.error) {
         console.error("[v0] API Error:", data.error)
         setMovies([])
-        setTrendingMovies([])
         return
       }
 
@@ -69,118 +63,49 @@ export default function MoviesPage() {
           subjectId: item.subjectId,
           detailPath: item.detailPath,
         }))
-        setTrendingMovies(formattedMovies)
-        if (!showSearchResults) {
-          setMovies(formattedMovies)
-        }
-      } else {
-        setMovies([])
-        setTrendingMovies([])
-      }
-    } catch (error) {
-      console.error("[v0] Error fetching trending movies:", error)
-      setMovies([])
-      setTrendingMovies([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchSuggestions = async (query: string) => {
-    if (!query.trim() || query.length < 2) {
-      setSuggestions([])
-      setShowSuggestions(false)
-      return
-    }
-
-    try {
-      const response = await fetch("/api/search-suggestions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      })
-      const data = await response.json()
-
-      if (data.data && Array.isArray(data.data)) {
-        setSuggestions(data.data.slice(0, 5))
-        setShowSuggestions(true)
-      }
-    } catch (error) {
-      console.error("Error fetching suggestions:", error)
-    }
-  }
-
-  const handleSearchInputChange = (value: string) => {
-    setSearchQuery(value)
-    fetchSuggestions(value)
-  }
-
-  const handleSuggestionClick = (suggestion: any) => {
-    const title = suggestion.title || suggestion.name
-    setSearchQuery(title)
-    setShowSuggestions(false)
-    handleSearchWithQuery(title)
-  }
-
-  const handleSearchWithQuery = async (query: string) => {
-    if (!query.trim()) {
-      setShowSearchResults(false)
-      setMovies(trendingMovies)
-      return
-    }
-
-    try {
-      setSearching(true)
-      setShowSuggestions(false)
-      setShowSearchResults(true)
-      const response = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      })
-      const data = await response.json()
-
-      if (data.error) {
-        console.error("Search API Error:", data.error)
-        setMovies([])
-        return
-      }
-
-      let searchResults = []
-      if (data.data && data.data.subjectList && Array.isArray(data.data.subjectList)) {
-        searchResults = data.data.subjectList
-      } else if (data.data && Array.isArray(data.data)) {
-        searchResults = data.data
-      } else if (Array.isArray(data)) {
-        searchResults = data
-      }
-
-      if (searchResults.length > 0) {
-        const formattedMovies = searchResults.map((item: any) => ({
-          id: item.id || item.subjectId || Math.random().toString(),
-          title: item.title || item.name || "Unknown",
-          poster: item.cover?.url || item.poster || item.coverUrl,
-          rating: item.rating || item.score,
-          year: item.releaseDate ? new Date(item.releaseDate).getFullYear() : item.year,
-          description: item.description || item.intro,
-          subjectId: item.subjectId,
-          detailPath: item.detailPath,
-        }))
         setMovies(formattedMovies)
       } else {
         setMovies([])
       }
     } catch (error) {
-      console.error("Error searching movies:", error)
+      console.error("[v0] Error fetching trending movies:", error)
       setMovies([])
     } finally {
-      setSearching(false)
+      setLoading(false)
     }
   }
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    handleSearchWithQuery(searchQuery)
+    if (!searchQuery.trim()) return
+
+    try {
+      setSearching(true)
+      const response = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: searchQuery }),
+      })
+      const data = await response.json()
+
+      if (data.data && Array.isArray(data.data)) {
+        const formattedMovies = data.data.map((item: any) => ({
+          id: item.id || item.subjectId,
+          title: item.title || item.name,
+          poster: item.poster || item.coverUrl,
+          rating: item.rating,
+          year: item.year,
+          description: item.description,
+          subjectId: item.subjectId,
+          detailPath: item.detailPath,
+        }))
+        setMovies(formattedMovies)
+      }
+    } catch (error) {
+      console.error("Error searching movies:", error)
+    } finally {
+      setSearching(false)
+    }
   }
 
   return (
@@ -203,31 +128,10 @@ export default function MoviesPage() {
               <Input
                 placeholder="Search movies, TV series..."
                 value={searchQuery}
-                onChange={(e) => handleSearchInputChange(e.target.value)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                onFocus={() => searchQuery.length >= 2 && suggestions.length > 0 && setShowSuggestions(true)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400 pl-10"
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-              
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-                  {suggestions.map((suggestion, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      className="px-4 py-2 hover:bg-slate-700 cursor-pointer text-white border-b border-slate-700 last:border-0"
-                    >
-                      <div className="font-medium">{suggestion.title || suggestion.name}</div>
-                      {suggestion.releaseDate && (
-                        <div className="text-xs text-slate-400">
-                          {new Date(suggestion.releaseDate).getFullYear()}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
             <Button type="submit" disabled={searching} className="bg-blue-600 hover:bg-blue-700">
               {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
@@ -243,17 +147,8 @@ export default function MoviesPage() {
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           </div>
         ) : (
-          <div className="space-y-12">
-            {!showSearchResults && trendingMovies.length > 0 && (
-              <TrendingCarousel items={trendingMovies.slice(0, 10)} title="Trending Now" />
-            )}
-
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-6">
-                {showSearchResults ? "Search Results" : "All Movies & Series"}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {movies.map((movie) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {movies.map((movie) => (
               <Link key={movie.id} href={`/movies/${movie.detailPath}`}>
                 <Card className="bg-slate-800 border-slate-700 hover:border-blue-500 transition-all cursor-pointer h-full overflow-hidden group">
                   <div className="relative overflow-hidden bg-slate-900 aspect-video">
@@ -289,9 +184,7 @@ export default function MoviesPage() {
                   </CardContent>
                 </Card>
               </Link>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         )}
       </main>
