@@ -67,7 +67,7 @@ export class MovieBoxClient {
       const url = getAbsoluteUrl("/wefeed-h5-bff/app/get-latest-app-pkgs?app_name=moviebox")
       const response = await fetch(url, {
         headers: DEFAULT_REQUEST_HEADERS,
-        credentials: "include",
+        next: { revalidate: 3600 }, // Cache for 1 hour
       })
 
       if (response.ok) {
@@ -86,7 +86,7 @@ export class MovieBoxClient {
         processApiResponse(json)
       }
     } catch (error) {
-      console.error("[v0] Error fetching app info:", error)
+      console.warn("Failed to fetch app info, continuing without cookies")
     }
   }
 
@@ -141,22 +141,35 @@ export class MovieBoxClient {
       })
     }
 
+    const cookieHeader = this.buildCookieHeader()
     const headers = {
       ...DEFAULT_REQUEST_HEADERS,
-      Cookie: this.buildCookieHeader(),
+      ...(cookieHeader && { Cookie: cookieHeader }),
       ...customHeaders,
     }
 
-    const response = await fetch(urlObj.toString(), {
-      headers,
-      credentials: "include",
-    })
+    let lastError: Error | null = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await fetch(urlObj.toString(), {
+          headers,
+          cache: "no-store", // Don't cache authenticated requests
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        return response
+      } catch (error) {
+        lastError = error as Error
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)))
+        }
+      }
     }
 
-    return response
+    throw lastError || new Error("Request failed after 3 attempts")
   }
 
   async getWithCookiesFromApi(

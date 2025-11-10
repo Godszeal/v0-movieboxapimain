@@ -21,88 +21,91 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Header */}
       <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white flex items-center gap-2">MovieBox API Explorer</h1>
-              <p className="text-slate-400 mt-1">Interactive API Testing & Documentation</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2 truncate">
+                MovieBox API Explorer
+              </h1>
+              <p className="text-slate-400 mt-1 text-sm sm:text-base">Interactive API Testing & Documentation</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <Link href="/movies">
-                <Button className="bg-blue-600 hover:bg-blue-700">View Live Website</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-sm sm:text-base px-3 sm:px-4">
+                  View Live Website
+                </Button>
               </Link>
-              <Badge className="bg-blue-600 text-white px-3 py-1">v1.0</Badge>
+              <Badge className="bg-blue-600 text-white px-2 sm:px-3 py-1 text-xs sm:text-sm">v1.0</Badge>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Features Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
           <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Search</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl text-white">Search</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-400">Find movies, TV series, and music</p>
+              <p className="text-sm sm:text-base text-slate-400">Find movies, TV series, and music</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Trending</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl text-white">Trending</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-400">Discover trending content</p>
+              <p className="text-sm sm:text-base text-slate-400">Discover trending content</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Downloads</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl text-white">Downloads</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-400">Get download links</p>
+              <p className="text-sm sm:text-base text-slate-400">Get download links</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Subtitles</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl text-white">Subtitles</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-400">Access subtitles</p>
+              <p className="text-sm sm:text-base text-slate-400">Access subtitles</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Streaming</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl text-white">Streaming</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-400">Stream content</p>
+              <p className="text-sm sm:text-base text-slate-400">Stream content</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Homepage</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl text-white">Homepage</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-400">Featured content</p>
+              <p className="text-sm sm:text-base text-slate-400">Featured content</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">Details</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl text-white">Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-400">Item information</p>
+              <p className="text-sm sm:text-base text-slate-400">Item information</p>
             </CardContent>
           </Card>
           <Card className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-white">More</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl text-white">More</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-400">Recommendations & more</p>
+              <p className="text-sm sm:text-base text-slate-400">Recommendations & more</p>
             </CardContent>
           </Card>
         </div>
@@ -110,46 +113,48 @@ export default function Home() {
         {/* API Explorer Tabs */}
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
-            <CardTitle className="text-white">API Explorer</CardTitle>
-            <CardDescription>Test all API endpoints and view responses in real-time</CardDescription>
+            <CardTitle className="text-white text-lg sm:text-xl">API Explorer</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
+              Test all API endpoints and view responses in real-time
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="search" className="w-full">
-              <TabsList className="grid w-full grid-cols-6 bg-slate-700 mb-4 overflow-x-auto">
-                <TabsTrigger value="search" className="text-xs sm:text-sm">
+              <TabsList className="w-full bg-slate-700 mb-4 h-auto flex-wrap sm:grid sm:grid-cols-6">
+                <TabsTrigger value="search" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Search
                 </TabsTrigger>
-                <TabsTrigger value="trending" className="text-xs sm:text-sm">
+                <TabsTrigger value="trending" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Trending
                 </TabsTrigger>
-                <TabsTrigger value="downloads" className="text-xs sm:text-sm">
+                <TabsTrigger value="downloads" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Downloads
                 </TabsTrigger>
-                <TabsTrigger value="subtitles" className="text-xs sm:text-sm">
+                <TabsTrigger value="subtitles" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Subtitles
                 </TabsTrigger>
-                <TabsTrigger value="stream" className="text-xs sm:text-sm">
+                <TabsTrigger value="stream" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Stream
                 </TabsTrigger>
-                <TabsTrigger value="homepage" className="text-xs sm:text-sm">
+                <TabsTrigger value="homepage" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Homepage
                 </TabsTrigger>
               </TabsList>
 
-              <TabsList className="grid w-full grid-cols-5 bg-slate-700">
-                <TabsTrigger value="details" className="text-xs sm:text-sm">
+              <TabsList className="w-full bg-slate-700 h-auto flex-wrap sm:grid sm:grid-cols-5">
+                <TabsTrigger value="details" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Details
                 </TabsTrigger>
-                <TabsTrigger value="recommendations" className="text-xs sm:text-sm">
+                <TabsTrigger value="recommendations" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Recommendations
                 </TabsTrigger>
-                <TabsTrigger value="popular" className="text-xs sm:text-sm">
+                <TabsTrigger value="popular" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Popular
                 </TabsTrigger>
-                <TabsTrigger value="suggestions" className="text-xs sm:text-sm">
+                <TabsTrigger value="suggestions" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Suggestions
                 </TabsTrigger>
-                <TabsTrigger value="hot" className="text-xs sm:text-sm">
+                <TabsTrigger value="hot" className="text-xs sm:text-sm flex-1 sm:flex-none">
                   Hot
                 </TabsTrigger>
               </TabsList>
@@ -202,14 +207,16 @@ export default function Home() {
         </Card>
 
         {/* API Documentation */}
-        <Card className="bg-slate-800 border-slate-700 mt-8">
+        <Card className="bg-slate-800 border-slate-700 mt-8 sm:mt-10">
           <CardHeader>
-            <CardTitle className="text-white">API Documentation</CardTitle>
+            <CardTitle className="text-white text-lg sm:text-xl">API Documentation</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h3 className="font-semibold text-white mb-2">Base URL</h3>
-              <code className="bg-slate-900 text-blue-400 px-3 py-2 rounded block text-sm">/api</code>
+              <h3 className="font-semibold text-white mb-2 text-sm sm:text-base">Base URL</h3>
+              <code className="bg-slate-900 text-blue-400 px-3 py-2 rounded block text-xs sm:text-sm break-all">
+                /api
+              </code>
             </div>
           </CardContent>
         </Card>
