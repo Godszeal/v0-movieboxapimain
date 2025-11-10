@@ -18,13 +18,13 @@ export default function ProxyTest() {
     setResult(null)
 
     try {
-      // Test with a sample CDN URL
-      const testUrl = "https://www.themoviedb.org/t/p/w500/sample.jpg"
+      const testUrl = "https://mdb.yeshd.net/resource/poster/e1BOR6/e1BOR6f19C7-Q2RWR1Xq0U14c0MJx0qL0.jpg"
       const proxyUrl = `/api/proxy?url=${encodeURIComponent(testUrl)}`
 
       const response = await fetch(proxyUrl)
+      const data = await response.json()
 
-      if (response.ok) {
+      if (response.ok && (data.success || response.status === 200)) {
         setResult({
           success: true,
           message: "Proxy is working correctly!",
@@ -34,7 +34,7 @@ export default function ProxyTest() {
         setResult({
           success: false,
           message: "Proxy test failed",
-          details: `Status: ${response.status}`,
+          details: `Status: ${response.status}, Error: ${data.error || "Unknown"}`,
         })
       }
     } catch (error) {

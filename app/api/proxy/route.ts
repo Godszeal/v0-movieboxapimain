@@ -38,19 +38,33 @@ export async function GET(request: NextRequest) {
         // Forward Range header for video streaming
         ...(request.headers.get("range") ? { Range: request.headers.get("range")! } : {}),
       },
+      redirect: "follow",
     })
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: `Failed to fetch resource: ${response.status}`, creator: "God's Zeal" },
-        { status: response.status, headers: corsHeaders },
+        {
+          error: `Failed to fetch resource`,
+          status: response.status,
+          statusText: response.statusText,
+          creator: "God's Zeal",
+        },
+        { status: response.status >= 400 ? response.status : 500, headers: corsHeaders },
       )
     }
 
     // Get the content type
     const contentType = response.headers.get("content-type") || "application/octet-stream"
 
-    // Create response with appropriate headers
+    if (contentType.includes("application/json")) {
+      const jsonData = await response.json()
+      return NextResponse.json(
+        { success: true, data: jsonData, creator: "God's Zeal" },
+        { status: 200, headers: corsHeaders },
+      )
+    }
+
+    // Create response with appropriate headers for media content
     const proxyResponse = new NextResponse(response.body, {
       status: response.status,
       headers: {
