@@ -31,7 +31,7 @@ export default function Home() {
               <p className="text-slate-400 mt-1 text-sm sm:text-base">Interactive API Testing & Documentation</p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <Link href="/landing">
+              <Link href="/movies">
                 <Button className="bg-blue-600 hover:bg-blue-700 text-sm sm:text-base px-3 sm:px-4">
                   View Live Website
                 </Button>
