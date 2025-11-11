@@ -311,7 +311,17 @@ export class MovieBoxClient {
     const customHeaders = {
       Referer: url,
     }
-    return this.getWithCookies(url, {}, customHeaders).then((r) => r.text())
+    const response = await this.getWithCookies(url, {}, customHeaders)
+    const html = await response.text()
+
+    // Extract JSON data from the HTML - it's embedded in a script tag
+    const jsonMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/)
+    if (jsonMatch && jsonMatch[1]) {
+      const data = JSON.parse(jsonMatch[1])
+      return data.props?.pageProps || data
+    }
+
+    throw new Error("Failed to extract JSON data from HTML")
   }
 
   async getMovieDetails(detailPath: string): Promise<any> {
