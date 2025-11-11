@@ -15,7 +15,6 @@ import RecommendationsExplorer from "@/components/api-explorer/recommendations-e
 import PopularSearchesExplorer from "@/components/api-explorer/popular-searches-explorer"
 import SearchSuggestionsExplorer from "@/components/api-explorer/search-suggestions-explorer"
 import HotMoviesExplorer from "@/components/api-explorer/hot-movies-explorer"
-import ProxyTest from "@/components/proxy-test"
 
 export default function Home() {
   return (
@@ -44,10 +43,6 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <div className="mb-8 sm:mb-10">
-          <ProxyTest />
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader className="pb-3 sm:pb-4">
